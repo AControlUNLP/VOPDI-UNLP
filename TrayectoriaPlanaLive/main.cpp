@@ -21,35 +21,37 @@ Mat graficar;
 Mat Em;
 Mat mask;
 
-vector<uchar> encontrado;
-vector<float> err;
-const Size winSize = Size(20,20);
+// Imagenes y máscaras
+Mat o_gray, o_gray2;
+Mat o_keypoints, o_keypoints2;
+Mat o_frame;
+Mat oflow;
+Mat graficar;
+Mat Em;
+Mat mask;
 
-const char* c_original = "Foto original", *c_key = "Keypoint";
-
-vector<KeyPoint> 	o_puntosfast;
-vector<Point2f> 	o_puntos, o_puntos2;
-vector<char> 		mMask;
-
-bool 	b_nonmaxSuppression=true;
-int  	n_threshold = 20; // umbral //int  n_slider_max = 255; // para Fast
-int 	n_slider_max = 400; //para orb
-
-int  	MaxF=200;
-
+// Video
 unsigned  	Vwidth	=800, Vheight=600;
 
-cv::Rect rect1(0, 0, Vwidth/2, Vheight/2);
-cv::Rect rect2(Vwidth/2, 0, Vwidth/2, Vheight/2);
-cv::Rect rect3(0, Vheight/2, Vwidth/2, Vheight/2);
-cv::Rect rect4(Vwidth/2, Vheight/2, Vwidth/2, Vheight/2);
-Mat masko1(Vheight,Vwidth,CV_8U);
-Mat masko2(Vheight,Vwidth,CV_8U);
-Mat masko3(Vheight,Vwidth,CV_8U);
-Mat masko4(Vheight,Vwidth,CV_8U);
+// Ventanas
+const char* c_original = "Foto original", *c_key = "Keypoint";
+stringstream text;
 
-Mat masko(Vheight,Vwidth,CV_8U,Scalar(255));
+// Keypoints
+vector<KeyPoint> 	o_puntosfast;
+vector<Point2f> 	o_puntos, o_puntos2;
+vector<char> 	mMask;
+vector<uchar> 	encontrado;
+vector<float> 	err;
 
+// Especificaciones para KeyDetect
+int  	MaxF=400;
+uint 	encontradoMin=35;
+bool 	b_nonmaxSuppression=true;
+int  	n_threshold = 20; // umbral //int  n_slider_max = 255; // para Fast
+int 	n_slider_max = 800; //para orb
+
+// Variables para Odometría y Gráfica
 double movx=0;
 double movy=0;
 Mat display;
@@ -57,27 +59,24 @@ Mat displayH;
 Mat movxh(1,1, CV_64F);
 Mat movyh(1,1, CV_64F);
 
-int nKeyPoints;
-stringstream text;
-
-uint encontradoMin = 50;
-TermCriteria termcrit(TermCriteria::EPS,20,0.003); //cuentas y epsilon (TermCriteria::COUNT|TermCriteria::EPS,20,0.003)
+// Especificaciones para OF
+const Size winSize = Size(60,60);
+TermCriteria termcrit(TermCriteria::EPS,20,0.003);
 Size subpixwin(5,5);
-
 cv::Ptr<cv::ORB> pOrb = cv::ORB::create(MaxF, 1.2f, 8, 31, 0, 4, cv::ORB::HARRIS_SCORE ,31);
+Mat masko(Vheight,Vwidth,CV_8U,Scalar(255));
+int nKeyPoints;
 
+// Para empezar a correr el programa
+bool play=1;
+bool init=1;
+int cntf=0;
+int cntfa=0;
 
 void on_trackbar( int, void* )
 {
 	pOrb->setMaxFeatures(MaxF);
 	std::cout << "Maxfeatures " << MaxF << std::endl;
-	/*
-	pOrb->detect(o_gray,o_puntosfast);
-	drawKeypoints(o_gray, o_puntosfast, o_keypoints, Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
-	imshow( c_key, o_keypoints );
-	KeyPoint::convert(o_puntosfast, o_puntos);
-	cornerSubPix(o_gray, o_puntos, subpixwin, Size(-1,-1), termcrit);
-	*/
 }
 
 void KeyDetect(vector<KeyPoint>& o_puntosfast, Mat& o_gray, Mat& o_keypoints, Mat& o_frame,
@@ -87,15 +86,7 @@ void KeyDetect(vector<KeyPoint>& o_puntosfast, Mat& o_gray, Mat& o_keypoints, Ma
 	pOrb->detect(o_gray,o_puntosfast,maskorb);
 	drawKeypoints(o_gray, o_puntosfast, o_keypoints, Scalar(0,255,0), DrawMatchesFlags::DEFAULT );
 	nKeyPoints = o_puntosfast.size();
-	//KeyPoint::convert(o_puntosfast, o_puntos);
 
-	/*
-	if (nKeyPoints==0){
-		waitKey(10);
-		pOrb->detect(o_gray,o_puntosfast,maskorb);
-		nKeyPoints = o_puntosfast.size();
-	}
-	*/
 	text << "      KeyDetect Corriendo";
 	putText(graficar,text.str(),Point2f(20,20),FONT_HERSHEY_PLAIN,1.5,Scalar(255,0,0),2,8,false);
 }
@@ -139,13 +130,6 @@ int main()
 
 	video >> o_frame;
 	graficar = o_frame.clone();
-
-/*
-	rectangle(masko1,rect1,cv::Scalar(255),CV_FILLED);
-	rectangle(masko2,rect2,cv::Scalar(255),CV_FILLED);
-	rectangle(masko3,rect3,cv::Scalar(255),CV_FILLED);
-	rectangle(masko4,rect4,cv::Scalar(255),CV_FILLED);
-*/
 
 	KeyDetect(o_puntosfast, o_gray, o_keypoints, o_frame, n_threshold, b_nonmaxSuppression, nKeyPoints,masko); //puntos iniciales
 
